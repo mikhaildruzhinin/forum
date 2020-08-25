@@ -36,7 +36,7 @@ def create_user():
             (login, generate_password_hash(password))
         )
         db.commit()
-        return {'message': 'Created Successfully'}, 201
+        return {'message': 'Created successfully'}, 201
     return 'create user'
 
 
@@ -64,11 +64,34 @@ def login():
 
         session.clear()
         session['user_id'] = user['id']
-        return {'message': 'Logged in Successfully'}, 200
+        return {'message': 'Logged in successfully'}, 200
     return 'log in'
 
 
+@bp.before_app_request
+def load_logged_in_user():
+    user_id = session.get('user_id')
+
+    if user_id is None:
+        g.user = None
+    else:
+        g.user = get_db().execute(
+            'SELECT * FROM user WHERE id = ?', (user_id,)
+        ).fetchone()
 
 
+@bp.route('/logout', methods=('GET','POST'))
+def logout():
+    session.clear()
+    return {'message': 'Logged out successfully'}, 200
 
 
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for('auth.login')) # проверить, правильно ли работает
+
+        return view(**kwargs)
+
+    return wrapped_view()
